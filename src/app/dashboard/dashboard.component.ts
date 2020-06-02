@@ -21,6 +21,7 @@ export class DashboardComponent implements OnInit {
   getHeroes(): void {
     this.heroService.getHeroes().subscribe(heroes => {
       this.messageService.add("Top Heroes fetched");
+      console.log(heroes);
       this.heroes = heroes.slice(1, 5);
     })
   }

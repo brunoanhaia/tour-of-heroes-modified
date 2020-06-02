@@ -4,34 +4,61 @@ import { Heroes } from "./mock-data";
 import { Observable, of} from "rxjs";
 import { MessageService } from "./message.service";
 import { HttpClient, HttpHeaders } from "@angular/common/http";
-import { catchError, map, tap } from 'rxjs/operators';
+import {catchError, map, subscribeOn, tap, timestamp} from 'rxjs/operators';
+import { config } from 'src/app/config'
+import {extendConfigurationFile} from "tslint/lib/configuration";
 
 @Injectable({
   providedIn: 'root'
 })
 export class HeroService {
+  localHeroes : Hero[] = [];
+
+  apiConfig = {
+    params: {
+      events: '310',
+      limit: '100',
+      ts: config.api['ts'],
+      apikey: config.api['apikey'],
+      hash: config.api['hash']
+    }
+  };
+  // apiConfig.params.append(config.api);
+
 
   httpOptions = {
     headers: new HttpHeaders({ 'Content-Type': 'application/json' })
   };
-
-  private heroesUrl = 'api/heroes'
+  private heroesUrl = `https://gateway.marvel.com/v1/public/characters`
   constructor(private messageService: MessageService, private http: HttpClient) {  }
 
-  getHeroes(): Observable<Hero[]> {
-    return this.http.get<Hero[]>(this.heroesUrl)
+  getHeroesFromAPI(): Observable<Hero[]> {
+    return this.http.get<any>(this.heroesUrl, this.apiConfig)
       .pipe(
         tap(_ => this.log('fetched heroes')),
-        catchError(this.handleError<Hero[]>('getHeroes', []))
+        map( (results: any) => results.data.results),
+        map( (heroes: any) => heroes.map(hero => <Hero> {id: hero.id,name: hero.name, thumbnail: {path: hero.thumbnail.path, extension: hero.thumbnail.extension}})),
+        tap( (heroes: any) => heroes.map( hero => this.localHeroes.push(hero))),
+        tap( _ => console.log(this.localHeroes)),
+        catchError(this.handleError<Hero[]>('getHeroes', [])),
       );
+   }
+
+  getHeroes(): Observable<Hero[]> {
+    return of(this.localHeroes);
   }
 
-  getHero(id: number): Observable<Hero> {
-    const url = `${this.heroesUrl}/${id}`;
+  getHeroServer(id: number): Observable<Hero> {
+    const url = `${this.heroesUrl}${id}`;
     return this.http.get<Hero>(url).pipe(
       tap(_ => this.log(`fetched hero id=${id}`)),
       catchError(this.handleError<Hero>(`getHero id=${id}`))
     );
+  }
+
+  getHero(id: number): Observable<Hero> {
+    const url = `${this.heroesUrl}${id}`;
+    return of(this.localHeroes.find(hero => hero.id == id));
   }
 
   updateHero(hero: Hero): Observable<any> {
