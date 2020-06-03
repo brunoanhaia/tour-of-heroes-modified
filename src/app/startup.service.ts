@@ -2,6 +2,7 @@ import { Injectable} from '@angular/core';
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { tap, map } from "rxjs/operators";
 import { config } from "./config";
+import { Hero } from "./hero";
 import {MessageService} from "./message.service";
 
 @Injectable({
@@ -17,6 +18,7 @@ export class StartupService {
 
     return this.http.get(config.endpoints.character, config.api).pipe(
       map((result:any) => result.data.results),
+      map( (heroes: any) => heroes.map(hero => <Hero> {id: hero.id,name: hero.name, thumbnail: {path: hero.thumbnail.path, extension: hero.thumbnail.extension}})),
       tap( (heroes: any) => this.messageService.add(""))
     )
       .toPromise()
